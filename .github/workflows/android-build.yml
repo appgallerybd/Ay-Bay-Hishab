@@ -16,18 +16,17 @@ jobs:
         with:
           node-version: 24
 
-      - name: Initialize Web Project
+      - name: Prepare Web Directory For Capacitor
         run: |
+          mkdir -p www
+          cp index.html www/
           echo '{"name": "bijoy-converter-pro", "version": "1.0.0", "dependencies": {"@capacitor/core": "^6.0.0", "@capacitor/android": "^6.0.0"}, "devDependencies": {"@capacitor/cli": "^6.0.0"}}' > package.json
           npm install
 
       - name: Configure Capacitor Android App
         run: |
-          npx cap init "Bijoy Converter Pro" "com.nibrasit.bijoyconverter" --web-dir=.
+          npx cap init "Bijoy Converter Pro" "com.nibrasit.bijoyconverter" --web-dir=www
           npx cap add android
-          
-          # অ্যান্ড্রয়েড প্রজেক্টের জন্য প্রয়োজনীয় মিনিমাম কনফিগারেশন জেনারেট করা
-          mkdir -p android/app/src/main/assets
           npx cap sync
 
       - name: Set up JDK 17
