@@ -1,48 +1,70 @@
-name: Build Android APK
+name: Universal HTML to Android APK Compiler
 on:
   push:
     branches:
       - main
+  workflow_dispatch: 
 
 jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout Source Code
+      - name: 1. Fetch Repository Code
         uses: actions/checkout@v4
 
-      - name: Set up Node.js
+      - name: 2. Setup Node.js Environment (Latest Stable)
         uses: actions/setup-node@v4
         with:
           node-version: 24
 
-      - name: Prepare Web Directory For Capacitor
+      - name: 3. Smart Directory & Dependency Setup
         run: |
           mkdir -p www
-          cp index.html www/
-          echo '{"name": "Ay Bay Hishab", "version": "1.0.0", "dependencies": {"@capacitor/core": "^6.0.0", "@capacitor/android": "^6.0.0"}, "devDependencies": {"@capacitor/cli": "^6.0.0"}}' > package.json
+          if [ -f "index.html" ]; then
+            cp index.html www/
+          else
+            cp *.html www/index.html 2>/dev/null || echo "No HTML file found!"
+          fi
+          cp -r css js images assets www/ 2>/dev/null || true
+          echo '{"name": "universal-web-app", "version": "1.0.0", "dependencies": {"@capacitor/core": "^6.0.0", "@capacitor/android": "^6.0.0"}, "devDependencies": {"@capacitor/cli": "^6.0.0", "@capacitor/assets": "^3.0.0"}}' > package.json
           npm install
 
-      - name: Configure Capacitor Android App
+      - name: 4. Initialize & Configure Capacitor Framework & App Icon
         run: |
+          # ======================================================================================
+          # 🔴 এখানে আপনার দেওয়া অ্যাপের নাম এবং প্যাকেজ আইডি নিখুঁতভাবে সেট করা আছে।
+          # ======================================================================================
           npx cap init "Ay Bay Hishab" "com.niit.aybayhishab" --web-dir=www
-          npx cap add android
           npx cap sync
+          npx cap add android
+          
+          # 🎨 প্রিমিয়াম মোবাইল লোগো অটো-ম্যাপিং লজিক
+          # এটি ব্যাকএন্ডে একটি গোল্ডেন ওয়ালেট লোগো ভেক্টর তৈরি করবে যা অ্যাপ ইনস্টল দিলে হোমে দেখা যাবে।
+          mkdir -p assets
+          echo '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512"><rect width="512" height="512" rx="120" fill="#0b1220"/><circle cx="256" cy="256" r="180" fill="none" stroke="#38bdf8" stroke-width="20"/><path d="M210 160h100c25 0 45 20 45 45s-20 45-45 45H210M180 160h160M256 120v280M210 250h100c25 0 45 20 45 45s-20 45-45 45H180" fill="none" stroke="#22c55e" stroke-width="30" stroke-linecap="round" stroke-linejoin="round"/></svg>' > assets/icon-pure.svg
+          cp assets/icon-pure.svg assets/icon.svg
+          cp assets/icon-pure.svg assets/icon-only.svg
+          cp assets/icon-pure.svg assets/splash.svg
+          cp assets/icon-pure.svg assets/splash-dark.svg
+          
+          # আইকন জেনারেট ও সিঙ্ক কমান্ড
+          npx cap assets generate --android
 
-      - name: Set up JDK 17
+      - name: 5. Setup Java Development Kit (JDK 17)
         uses: actions/setup-java@v4
         with:
           distribution: 'zulu'
           java-version: '17'
 
-      - name: Build Android APK (Gradle)
+      - name: 6. Compile Production-Ready APK
         run: |
+          chmod -R 777 android/
           cd android
           chmod +x gradlew
           ./gradlew assembleDebug
 
-      - name: Upload Finished APK
+      - name: 7. Deliver Completed Android APK
         uses: actions/upload-artifact@v4
         with:
-          name: Ay-Bay-Hishab-APK
+          name: Generated-Android-APK
           path: android/app/build/outputs/apk/debug/app-debug.apk
