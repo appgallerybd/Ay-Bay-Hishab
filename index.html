@@ -7,7 +7,7 @@
 <title>আয়-ব্যয় হিসাব প্রো</title>
 
 <script src="https://cdn.tailwindcss.com"></script>
-<script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
+<script src="https://unpkg.com/lucide@latest"></script>
 
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -35,18 +35,15 @@
   html, body { font-family: 'Hind Siliguri', sans-serif; user-select: none; -webkit-tap-highlight-color: transparent; }
   body { transition: background-color 0.2s, color 0.2s; }
   
-  /* Form input field styles across dark/light modes */
   .field { background:#0f172a; border:1px solid #1e293b; color:#e5e7eb; transition:all .2s ease; }
   .field:focus { outline:none; border-color:#38bdf8; box-shadow:0 0 0 3px rgba(56,189,248,.15); }
   
-  /* Light mode explicit overrides */
   html.light body { background: #f8fafc; color: #0f172a; }
   html.light .field { background:#ffffff; border-color:#cbd5e1; color:#0f172a; }
   html.light .field:focus { border-color:#38bdf8; }
   
   .seg-btn.active { background:#38bdf8; color:#0b1220; font-weight:600; }
   
-  /* App animations */
   @keyframes slideUp { from{transform:translateY(100%)} to{transform:translateY(0)} }
   @keyframes fadeIn { from{opacity:0} to{opacity:1} }
   .anim-slide-up { animation: slideUp 0.25s cubic-bezier(0.34, 1.56, 0.64, 1) both; }
@@ -101,7 +98,7 @@
             <i data-lucide="line-chart" class="w-4 h-4 text-brand"></i> আয়-ব্যয় ট্রেন্ড গ্রাফ
           </h3>
           <div class="flex gap-1 p-0.5 bg-slate-900 dark:bg-slate-900 bg-slate-200 border dark:border-line border-lLine rounded-lg text-[10px]">
-            <button onclick="changeGraphTime('week')" id="gTime-week" class="px-2 py-1 rounded-md text-muted font-bold">সপ্তাহ</button>
+            <button onclick="changeGraphTime('week')" id="gTime-week" class="px-2 py-1 rounded-md text-muted font-bold active">সপ্তাহ</button>
             <button onclick="changeGraphTime('month')" id="gTime-month" class="px-2 py-1 rounded-md text-muted font-bold">মাস</button>
             <button onclick="changeGraphTime('year')" id="gTime-year" class="px-2 py-1 rounded-md text-muted font-bold">বছর</button>
           </div>
@@ -304,7 +301,7 @@ const toBn = s => String(s).replace(/[0-9]/g, d => bnDigits[+d]);
 const $ = (id) => document.getElementById(id);
 
 // ═══════════════════════════════════════════
-// CORE THEME ENGINE (LIGHT/DARK/SYSTEM)
+// INITIALIZATION ENGINE
 // ═══════════════════════════════════════════
 document.addEventListener('DOMContentLoaded', () => {
     activeThemeSetting = localStorage.getItem('ab-theme-mode') || 'system';
@@ -329,8 +326,10 @@ function applyThemeLogic() {
     
     if(computedDark) {
         doc.classList.remove('light');
+        doc.classList.add('dark');
         $('themeMeta').setAttribute('content', '#0b1220');
     } else {
+        doc.classList.remove('dark');
         doc.classList.add('light');
         $('themeMeta').setAttribute('content', '#f8fafc');
     }
@@ -355,9 +354,6 @@ function updateDateLabels() {
     $('todayLabel').textContent = 'আজ: ' + bnDate(todayISO());
 }
 
-// ═══════════════════════════════════════════
-// DATA METHODS & RENDERERS
-// ═══════════════════════════════════════════
 function loadData() {
     try {
         const txData = localStorage.getItem(STORAGE_KEY);
@@ -400,7 +396,7 @@ function computeTotals() {
 }
 
 // ═══════════════════════════════════════════
-// PREMIUM SMOOTH CURVED GRAPH ENGINE
+// PREMIUM SMOOTH CURVED GRAPH ENGINE (FIXED)
 // ═══════════════════════════════════════════
 function changeGraphTime(mode) {
     graphTimeMode = mode;
@@ -411,6 +407,8 @@ function changeGraphTime(mode) {
 
 function renderCurveGraph() {
     const wrapper = $('curveGraphWrapper');
+    if (!wrapper) return;
+
     let pointsCount = 7; let dataTimeline = [];
     
     if(graphTimeMode === 'week') {
@@ -452,7 +450,10 @@ function renderCurveGraph() {
         });
     });
 
-    let maxVal = Math.max(...incomePoints, ...expensePoints, 1000);
+    // Zero checking to prevent Math.max calculation crashes
+    let maxVal = Math.max(...incomePoints, ...expensePoints, 0);
+    if (maxVal === 0) maxVal = 1000; 
+
     const width = 500, height = 130, padding = 15;
     const graphWidth = width - padding * 2; const graphHeight = height - padding * 2;
     
@@ -464,7 +465,8 @@ function renderCurveGraph() {
         });
     };
 
-    const incCoords = getCoordinates(incomePoints); const expCoords = getCoordinates(expensePoints);
+    const incCoords = getCoordinates(incomePoints); 
+    const expCoords = getCoordinates(expensePoints);
 
     const makeSmoothPath = (coords) => {
         if(coords.length === 0) return '';
@@ -504,21 +506,16 @@ function renderCurveGraph() {
     `;
 }
 
+// ═══════════════════════════════════════════
+// GLOBAL VIEW RENDER CONTROL MODULE
+// ═══════════════════════════════════════════
 function renderAll() {
     renderTotals();
     renderCurveGraph();
     renderRecentTransactions();
     applyHistoryFilters();
     renderCategoryUI();
-    lucide.createIcons();
-}
-
-function renderTotals() {
-    const { income, expense, balance } = computeTotals();
-    $('balance').textContent = (balance < 0 ? '- ' : '') + fmt(balance);
-    $('totalIncome').textContent = fmt(income);
-    $('totalExpense').textContent = fmt(expense);
-    $('balance').className = "text-3xl font-bold tracking-tight mb-4 " + (balance > 0 ? 'text-income' : balance < 0 ? 'text-expense' : 'dark:text-soft text-lText');
+    if (window.lucide) { window.lucide.createIcons(); }
 }
 
 function renderRecentTransactions() {
@@ -535,6 +532,7 @@ function applyHistoryFilters() {
     const dateVal = $('historyDateFilter').value;
     const typeVal = $('historyTypeFilter').value;
     const list = $('fullTxList');
+    if (!list) return;
 
     const filtered = transactions.filter(t => {
         const matchesDate = dateVal ? t.date === dateVal : true;
@@ -544,7 +542,7 @@ function applyHistoryFilters() {
 
     $('txCount').textContent = toBn(filtered.length) + 'টি';
     list.innerHTML = filtered.map(t => getTxLiHtml(t)).join('');
-    lucide.createIcons();
+    if (window.lucide) { window.lucide.createIcons(); }
 }
 
 function resetHistoryFilters() {
@@ -573,11 +571,15 @@ function getTxLiHtml(t) {
 }
 
 function renderCategoryUI() {
-    $('txCategory').innerHTML = categories[currentType].map(c => `<option value="${c}">${c}</option>`).join('');
+    const txCatElement = $('txCategory');
+    if(txCatElement && categories[currentType]) {
+        txCatElement.innerHTML = categories[currentType].map(c => `<option value="${c}">${c}</option>`).join('');
+    }
     let items = [];
     categories.income.forEach((c, idx) => items.push(getCatLiHtml(c, 'income', idx)));
     categories.expense.forEach((c, idx) => items.push(getCatLiHtml(c, 'expense', idx)));
-    $('settingsCatList').innerHTML = items.join('');
+    const setCatList = $('settingsCatList');
+    if (setCatList) { setCatList.innerHTML = items.join(''); }
 }
 
 function getCatLiHtml(name, type, idx) {
@@ -593,12 +595,11 @@ function getCatLiHtml(name, type, idx) {
 }
 
 // ═══════════════════════════════════════════
-// EVENTS & HANDLERS
+// EVENTS INTERACTION ROUTER
 // ═══════════════════════════════════════════
 function setupInitialEvents() {
     $('txForm').addEventListener('submit', handleTxSubmit);
     $('catForm').addEventListener('submit', handleCatSubmit);
-    changeGraphTime('week');
 
     document.querySelectorAll('.modal-type-btn').forEach(btn => {
         btn.addEventListener('click', () => {
@@ -666,7 +667,7 @@ function clearAllData() {
 }
 
 // ═══════════════════════════════════════════
-// REPORT EXPORTING SUITE
+// DATA EXPORTING AGENT SYSTEM
 // ═══════════════════════════════════════════
 function triggerExport() {
     if(transactions.length === 0) { toast('এক্সপোর্ট করার মতো কোনো ডেটা নেই', true); return; }
@@ -715,6 +716,7 @@ function exportToWord(fName) {
 function exportToNativePDF(fName) {
     const { income, expense, balance } = computeTotals();
     const printWin = window.open('', '_blank');
+    if (!printWin) return;
     printWin.document.write(`
       <html><head><title>${fName}</title><style>
           body { font-family: Arial, sans-serif; padding: 30px; }
@@ -754,4 +756,4 @@ function toast(m, isErr=false) {
 }
 </script>
 </body>
-</html>
+                 </html>
