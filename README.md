@@ -1,2 +1,2 @@
-# Bijoy-converter-Pro
-this app for Bijoy converter. (Unicode to Bijoy Bijoy to Unicode)
+# Ay Bay Hishab
+this app for management Self Income and Expense.
