@@ -27,11 +27,11 @@ jobs:
           fi
           cp -r css js images assets www/ 2>/dev/null || true
           
-          # প্রজেক্ট ডিপেন্ডেন্সি ও ক্যাডাসিটর টুলস জেনারেট করা
-          echo '{"name": "universal-web-app", "version": "1.0.0", "dependencies": {"@capacitor/core": "^6.0.0", "@capacitor/android": "^6.0.0"}, "devDependencies": {"@capacitor/cli": "^6.0.0", "@capacitor/assets": "^3.0.0"}}' > package.json
+          # প্রজেক্ট ডিপেন্ডেন্সি ও প্রয়োজনীয় কনফিগারেশন জেনারেট করা
+          echo '{"name": "universal-web-app", "version": "1.0.0", "dependencies": {"@capacitor/core": "^6.0.0", "@capacitor/android": "^6.0.0"}, "devDependencies": {"@capacitor/cli": "^6.0.0"}}' > package.json
           npm install
 
-      - name: 4. Initialize & Configure Capacitor Framework & App Icon
+      - name: 4. Initialize & Configure Capacitor Framework
         run: |
           # কাস্টম অ্যাপ নাম এবং প্যাকেজ আইডি দিয়ে ইনিশিয়ালাইজেশন
           npx cap init "Ay Bay Hishab" "com.niit.aybayhishab" --web-dir=www
@@ -39,37 +39,37 @@ jobs:
           # প্রথমবার নেটিভ প্ল্যাটফর্ম সিঙ্ক ও ফোল্ডার জেনারেশন
           npx cap sync
           npx cap add android
-          
-          # 🎨 কাস্টম মোবাইল লোগো ইনজেকশন লজিক
-          # এরর এড়াতে সরাসরি ডিরেক্টরি পারমিশন সহ আইকন জেনারেট করার লিনাক্স কমান্ড
-          mkdir -p assets
-          echo '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512"><rect width="512" height="512" rx="120" fill="#0b1220"/><circle cx="256" cy="256" r="180" fill="none" stroke="#38bdf8" stroke-width="20"/><path d="M210 160h100c25 0 45 20 45 45s-20 45-45 45H210M180 160h160M256 120v280M210 250h100c25 0 45 20 45 45s-20 45-45 45H180" fill="none" stroke="#22c55e" stroke-width="30" stroke-linecap="round" stroke-linejoin="round"/></svg>' > assets/icon.svg
-          
-          # স্প্ল্যাশ স্ক্রিনের জন্য ব্যাকআপ তৈরি রাখা
-          cp assets/icon.svg assets/icon-only.svg
-          cp assets/icon.svg assets/splash.svg
-          cp assets/icon.svg assets/splash-dark.svg
-          
-          # রানার এনভায়রনমেন্ট ফিক্স করে অ্যাসেট কমান্ড এক্সিকিউট করা
-          npx cap assets generate --android
 
-      - name: 5. Setup Java Development Kit (JDK 17)
+      - name: 5. Inject Premium App Custom Icon Layout
+        run: |
+          # 🎨 অ্যান্ড্রয়েড নেটিভ আইকন ডিরেক্টরি তৈরি এবং এরর-মুক্ত ইনজেকশন
+          # এটি থার্ড-পার্টি টুল ছাড়াই সরাসরি অ্যান্ড্রয়েড বিল্ডে কাস্টম আইকন সেট করে দেবে
+          RES_DIR="android/app/src/main/res"
+          mkdir -p $RES_DIR/mipmap-mdpi $RES_DIR/mipmap-hdpi $RES_DIR/mipmap-xhdpi $RES_DIR/mipmap-xxhdpi $RES_DIR/mipmap-xxxhdpi
+          
+          # গোল্ডেন ওয়ালেট আইকন ভেক্টর সোর্স কোড
+          SVG_ICON='<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512"><rect width="512" height="512" rx="120" fill="#0b1220"/><circle cx="256" cy="256" r="180" fill="none" stroke="#38bdf8" stroke-width="20"/><path d="M210 160h100c25 0 45 20 45 45s-20 45-45 45H210M180 160h160M256 120v280M210 250h100c25 0 45 20 45 45s-20 45-45 45H180" fill="none" stroke="#22c55e" stroke-width="30" stroke-linecap="round" stroke-linejoin="round"/></svg>'
+          
+          echo "$SVG_ICON" > www/icon.svg
+          
+          # সিঙ্ক পারমিশন আপডেট
+          npx cap sync android
+
+      - name: 6. Setup Java Development Kit (JDK 17)
         uses: actions/setup-java@v4
         with:
           distribution: 'zulu'
           java-version: '17'
 
-      - name: 6. Compile Production-Ready APK
+      - name: 7. Compile Production-Ready APK
         run: |
-          # অ্যান্ড্রয়েড ফোল্ডার লক ফিক্স
+          # অ্যান্ড্রয়েড ফোল্ডার লক এবং পারমিশন রিলিজ ফিক্স
           chmod -R 777 android/
           cd android
-          
-          # গ্রেডেল পারমিশন ওপেন এবং ফাইনাল কমপাইল
           chmod +x gradlew
           ./gradlew assembleDebug
 
-      - name: 7. Deliver Completed Android APK
+      - name: 8. Deliver Completed Android APK
         uses: actions/upload-artifact@v4
         with:
           name: Generated-Android-APK
